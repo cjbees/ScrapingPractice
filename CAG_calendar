@@ -1,0 +1,64 @@
+#Try scraping the CAG meeting calendar
+#selector for event in the sidebar: tribe-events-list-widget-2 > ol > 
+#li.tribe-events-list-widget-events.type-tribe_events.post-13595.tribe-clearfix.tribe-events-category-cag-committee-meeting.tribe-events-venue-5302.tribe-events-organizer-12207
+
+library(tidyverse)
+library(rvest)
+
+#Specify the webpage
+url <- "https://gowanuscag.org/index.php/category/general-meetings/"
+
+#Read the HTML content from the webpage  
+cag <- read_html(url)  
+
+# tribe-events-list-widget-2 → This is likely the ID of the widget containing the events.
+#ol → This is the ordered list (<ol>) holding the event list items.
+#li.tribe-events-list-widget-events → This is a list item (<li>) containing an event.
+#type-tribe_events, tribe-clearfix, 
+#tribe-events-category-cag-committee-meeting, etc. → 
+  #These are classes that categorize and style events.
+
+#identify CSS selectors; it's using Tribe Events Calendar plugin for wordpress
+# Extract all upcoming event items
+events <- cag |> html_nodes("#tribe-events-list-widget-2 ol li")
+
+# Extract event titles
+titles <- events |> html_nodes(".tribe-event-title") |> html_text(trim = TRUE)
+
+# Extract event dates (also giving start times)
+dates <- events |> html_nodes(".tribe-event-date-start") |>
+  html_text(trim = TRUE)
+
+# Split into Date and Time
+split_data <- str_split_fixed(dates, " @ ", 2)
+
+dates <- split_data[, 1]
+startTimes <- split_data[, 2]
+
+# Extract event end times
+endTimes <- events |> html_nodes(".tribe-event-time") %>% html_text(trim = TRUE)
+
+
+#To extract the URL of each event from the sidebar using rvest, you need to 
+#target the <a> (anchor) tag inside the <h4> title element and extract 
+#the href attribute. 
+
+# Extract event URLs (href attribute from <a> tag)
+  #html_nodes("h4 a") targets the <a> tag inside the <h4> title element.
+  #html_attr("href") extracts the URL from the href attribute.
+urls <- events %>% html_nodes("h4 a") |> html_attr("href")
+
+
+# Create a data frame with event title, date, start and end times, and url
+events_df <- data.frame(
+  Title = titles,
+  Date = dates,
+  StartTime = startTimes,
+  EndTime = endTimes,
+  URLs = urls,
+  stringsAsFactors = FALSE
+)
+
+
+  
+  
